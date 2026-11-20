@@ -1,0 +1,64 @@
+import { bangla } from './translations.ts';
+import type { AppLanguage } from './translations.ts';
+
+let activeLanguage: AppLanguage = 'en';
+
+const dynamicTranslations: Array<{ pattern: RegExp; translate: (match: RegExpExecArray) => string }> = [
+  { pattern: /^Set rates for (.+)$/, translate: match => match[1] === 'wallet currencies' ? 'ওয়ালেটের মুদ্রার জন্য বিনিময় হার নির্ধারণ করুন' : `বিনিময় হার নির্ধারণ করুন: ${match[1]}` },
+  { pattern: /^Enter a valid amount with up to (\d+) decimal places\.$/, translate: match => `${match[1]} ঘর পর্যন্ত দশমিকসহ সঠিক পরিমাণ লিখুন।` },
+  { pattern: /^Could not create the (PDF|XLSX) report\.$/, translate: match => `${match[1]} প্রতিবেদন তৈরি করা যায়নি।` },
+  { pattern: /^The backup has an invalid (.+) section\.$/, translate: match => `ব্যাকআপের ${match[1]} অংশটি সঠিক নয়।` },
+  { pattern: /^Invalid (.+) record (\d+)\.$/, translate: match => `ব্যাকআপের ${match[1]} রেকর্ড ${match[2]} সঠিক নয়।` },
+  { pattern: /^Invalid fields in (.+) record (\d+)\.$/, translate: match => `ব্যাকআপের ${match[1]} রেকর্ড ${match[2]}-এ সঠিক ক্ষেত্র নেই।` },
+  { pattern: /^Invalid number in (.+) record (\d+)\.$/, translate: match => `ব্যাকআপের ${match[1]} রেকর্ড ${match[2]}-এ সঠিক সংখ্যা নেই।` },
+  { pattern: /^(.+) is your highest spending category in saved transactions\.$/, translate: match => `সংরক্ষিত লেনদেনে সর্বাধিক ব্যয়ের খাত হলো ${match[1]}।` },
+  { pattern: /^Target (.+)$/, translate: match => `লক্ষ্যের তারিখ: ${match[1]}` },
+  { pattern: /^You send (.+) · They receive (.+)$/, translate: match => `আপনি পাঠাচ্ছেন ${match[1]} · প্রাপক পাবেন ${match[2]}` },
+  { pattern: /^To (.+)$/, translate: match => `প্রাপক: ${match[1]}` },
+  { pattern: /^From (.+)$/, translate: match => `প্রেরক: ${match[1]}` },
+  { pattern: /^(.+) over$/, translate: match => `${match[1]} বেশি` },
+  { pattern: /^(.+) left$/, translate: match => `${match[1]} বাকি` },
+  { pattern: /^(.+) remaining$/, translate: match => `${match[1]} বাকি` },
+  { pattern: /^of (.+)$/, translate: match => `${match[1]}-এর মধ্যে` },
+  { pattern: /^(\d+) pending local change\(s\)$/, translate: match => `স্থানীয় পরিবর্তন অপেক্ষমাণ: ${match[1]}` },
+  { pattern: /^(\d+) categories$/, translate: match => `খাত: ${match[1]}` },
+  { pattern: /^(\d+) (.+) wallet\(s\)$/, translate: match => `${match[1]}টি ${match[2]} ওয়ালেট` },
+  { pattern: /^Last synced: (.+)$/, translate: match => `সর্বশেষ সিঙ্ক: ${match[1]}` },
+  { pattern: /^Sync complete at (.+)\. Background sync is scheduled when the system allows\.$/, translate: match => `${match[1]} সময়ে সিঙ্ক সম্পন্ন হয়েছে। সিস্টেম অনুমতি দিলে ব্যাকগ্রাউন্ড সিঙ্ক হবে।` },
+  { pattern: /^Sync complete at (.+)\.$/, translate: match => `${match[1]} সময়ে সিঙ্ক সম্পন্ন হয়েছে।` },
+  { pattern: /^Sync did not finish\. Your local records are still saved\.$/, translate: () => 'সিঙ্ক সম্পন্ন হয়নি। আপনার স্থানীয় তথ্য সংরক্ষিত আছে।' },
+  { pattern: /^(\d+) records were merged into this device\.$/, translate: match => `${match[1]}টি রেকর্ড এই ডিভাইসে মেশানো হয়েছে।` },
+  { pattern: /^Wallets will be converted to (.+) using the rates you entered\.$/, translate: match => `আপনার দেওয়া বিনিময় হার ব্যবহার করে ওয়ালেটগুলো ${match[1]} মুদ্রায় রূপান্তরিত হবে।` },
+  { pattern: /^(\d+) bill reminder\(s\) scheduled for 9:00 AM on their due date, for the next 90 days\.$/, translate: match => `আগামী ৯০ দিনের জন্য ${match[1]}টি বিলের অনুস্মারক পরিশোধের দিনে সকাল ৯টায় নির্ধারিত হয়েছে।` },
+  { pattern: /^(.+) · (.+) on (.+)\. This will create a local transaction\.$/, translate: match => `${match[1]} · ${match[2]}, তারিখ ${match[3]}। এটি স্থানীয় লেনদেন তৈরি করবে।` },
+  { pattern: /^This confirms you paid (.+)\. Hisab will record the expense in (.+)\.$/, translate: match => `আপনি ${match[1]} পরিশোধ করেছেন বলে নিশ্চিত করছেন। হিসাব ${match[2]}-এ ব্যয়টি লিখবে।` },
+  { pattern: /^This confirms you paid (.+)\. Hisab will record the expense\.$/, translate: match => `আপনি ${match[1]} পরিশোধ করেছেন বলে নিশ্চিত করছেন। হিসাব ব্যয়টি লিখবে।` },
+  { pattern: /^Paid (.+) · Due (.+)$/, translate: match => `পরিশোধিত ${match[1]} · পরিশোধের তারিখ ${match[2]}` },
+  { pattern: /^(.+) · Fee (.+)$/, translate: match => `${match[1]} · ফি ${match[2]}` },
+  { pattern: /^(.+) · (\d+) items$/, translate: match => `${match[1]} · ${match[2]}টি এন্ট্রি` },
+  { pattern: /^remaining · original (.+)$/, translate: match => `বাকি · মূল পরিমাণ ${match[1]}` },
+  { pattern: /^Paid (.+)$/, translate: match => `পরিশোধিত ${match[1]}` },
+  { pattern: /^(.+) saved$/, translate: match => `জমা: ${match[1]}` },
+  { pattern: /^(.+) to go$/, translate: match => `লক্ষ্যে বাকি: ${match[1]}` },
+  { pattern: /^(.+) · Due (.+)$/, translate: match => `${match[1]} · পরিশোধের তারিখ ${match[2]}` },
+  { pattern: /^(.+) limit · (\d+)% used this (week|month)$/, translate: match => `${match[1]} সীমা · ${match[2]}% ব্যবহৃত (${match[3] === 'week' ? 'সপ্তাহে' : 'মাসে'})` },
+  { pattern: /^(.+) WALLET BALANCE$/, translate: match => `${match[1]} ওয়ালেট ব্যালেন্স` },
+  { pattern: /^PORTFOLIO VALUE · (.+)$/, translate: match => `পোর্টফোলিওর মূল্য · ${match[1]}` },
+  { pattern: /^All (.+) wallets$/, translate: match => `সব ${match[1]} ওয়ালেট` },
+];
+
+export function setActiveLanguage(language: AppLanguage) {
+  activeLanguage = language;
+}
+
+export function translateText(text: string, language = activeLanguage) {
+  if (language === 'en') return text;
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  const exact = bangla[normalized];
+  if (exact) return exact;
+  for (const entry of dynamicTranslations) {
+    const match = entry.pattern.exec(normalized);
+    if (match) return entry.translate(match);
+  }
+  return text;
+}

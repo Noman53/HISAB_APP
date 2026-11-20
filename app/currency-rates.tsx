@@ -1,0 +1,24 @@
+import { Ionicons } from '@expo/vector-icons';
+import { Alert } from '@/components/LocalizedAlert';
+import { LocalizedTextInput as TextInput, LocalizedTouchableOpacity as TouchableOpacity } from '@/components/LocalizedControls';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppText } from '@/components/AppText';
+import { Surface } from '@/components/Surface';
+import { loadPortfolioValuation, savePortfolioValuation } from '@/finance/database';
+import { parseRateToScaled } from '@/finance/money';
+import { useFinanceStore } from '@/finance/store';
+import { useTheme } from '@/theme/ThemeProvider';
+import { palette, radius, spacing } from '@/theme/tokens';
+
+export default function CurrencyRatesScreen() {
+  const { colors } = useTheme(); const refresh = useFinanceStore(state => state.initialize);
+  const [base, setBase] = useState('BDT'); const [currencies, setCurrencies] = useState<string[]>([]); const [rates, setRates] = useState<Record<string, string>>({}); const [working, setWorking] = useState(false);
+  useFocusEffect(useCallback(() => { void loadPortfolioValuation().then(value => { setBase(value.baseCurrency); setCurrencies(value.currencies); setRates(Object.fromEntries(Object.entries(value.rates).map(([code, scaled]) => [code, (scaled / 100_000_000).toString()]))); }); }, []));
+  async function save() { try { setWorking(true); const baseCode = base.trim().toUpperCase(); const input: Record<string, number> = {}; for (const currency of currencies) if (currency !== baseCode) input[currency] = parseRateToScaled(rates[currency] ?? ''); await savePortfolioValuation(baseCode, input); await refresh(); Alert.alert('Valuation saved', `Wallets will be converted to ${baseCode} using the rates you entered.`); router.back(); } catch (reason) { Alert.alert('Check your rates', reason instanceof Error ? reason.message : 'Could not save the valuation settings.'); } finally { setWorking(false); } }
+  return <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}><ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled"><View style={styles.header}><TouchableOpacity onPress={() => router.back()} style={[styles.back, { borderColor: colors.border, backgroundColor: colors.card }]}><Ionicons name="arrow-back" size={20} color={colors.text} /></TouchableOpacity><AppText style={styles.heading} localized>Portfolio valuation</AppText><View style={{ width: 42 }} /></View><Surface style={styles.info}><AppText style={[styles.body, { color: colors.muted }]} localized>Choose a base currency, then enter how much base currency one unit of each wallet currency is worth. Rates are manual and apply to current wallet balances.</AppText></Surface><AppText style={styles.label} localized>BASE CURRENCY</AppText><TextInput accessibilityLabel="Base currency" autoCapitalize="characters" maxLength={3} value={base} onChangeText={setBase} style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]} />{currencies.filter(code => code !== base.trim().toUpperCase()).map(code => <View key={code}><AppText style={styles.label}>1 {code} = ? {base.trim().toUpperCase()}</AppText><TextInput accessibilityLabel={`Rate for ${code}`} keyboardType="decimal-pad" value={rates[code] ?? ''} onChangeText={value => setRates(current => ({ ...current, [code]: value }))} placeholder="Exchange rate" placeholderTextColor={colors.muted} style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.card }]} /></View>)}<TouchableOpacity disabled={working} onPress={() => void save()} style={[styles.save, { opacity: working ? 0.6 : 1 }]}><AppText style={styles.saveText} localized>{working ? 'Saving…' : 'Save valuation rates'}</AppText></TouchableOpacity></ScrollView></SafeAreaView>;
+}
+
+const styles = StyleSheet.create({ safe: { flex: 1 }, content: { padding: spacing.md, gap: 10 }, header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }, back: { width: 42, height: 42, borderWidth: 1, borderRadius: 21, alignItems: 'center', justifyContent: 'center' }, heading: { fontSize: 19, fontWeight: '700' }, info: { padding: 13 }, body: { fontSize: 12, lineHeight: 18 }, label: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, marginTop: 12 }, input: { height: 48, borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: 13, fontSize: 14 }, save: { minHeight: 50, backgroundColor: palette.blue, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', marginTop: 20 }, saveText: { color: '#FFFFFF', fontWeight: '700' } });
