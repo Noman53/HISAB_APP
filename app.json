@@ -35,7 +35,15 @@
         }
       ],
       "expo-web-browser",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "-keep class androidx.work.impl.WorkDatabase_Impl { *; }"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
