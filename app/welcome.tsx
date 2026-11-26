@@ -17,7 +17,7 @@ import { isInitialSetupComplete } from '@/finance/database';
 export default function WelcomeScreen() {
   const { colors } = useTheme();
   const { width, height } = useWindowDimensions();
-  const [working, setWorking] = useState(false);
+  const [working, setWorking] = useState<'guest' | 'google' | null>(null);
   const [error, setError] = useState('');
   const maxWidth = Math.max(0, Math.min(width - spacing.lg * 2, 440));
 
@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
   }
 
   async function continueAsGuest() {
-    setWorking(true);
+    setWorking('guest');
     setError('');
     try {
       await setPersistentValue(LAUNCH_CHOICE_KEY, 'guest');
@@ -34,12 +34,12 @@ export default function WelcomeScreen() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not continue as a guest.');
     } finally {
-      setWorking(false);
+      setWorking(null);
     }
   }
 
   async function continueWithGoogle() {
-    setWorking(true);
+    setWorking('google');
     setError('');
     try {
       const result = await signInWithGoogle();
@@ -50,7 +50,7 @@ export default function WelcomeScreen() {
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not sign in with Google.');
     } finally {
-      setWorking(false);
+      setWorking(null);
     }
   }
 
@@ -65,15 +65,15 @@ export default function WelcomeScreen() {
         <AppText style={[styles.description, { color: colors.muted }]} localized>Manage your money privately. Sign in to sync across devices, or start with a local guest ledger.</AppText>
 
         {isSupabaseConfigured ? <View style={styles.accountActions}>
-          <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => openAccount('sign_up')} style={styles.primary}>
+          <TouchableOpacity accessibilityRole="button" disabled={!!working} onPress={() => openAccount('sign_up')} style={styles.primary}>
             <AppText style={styles.primaryText} localized>Create account</AppText>
             <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => openAccount('sign_in')} style={[styles.secondary, { borderColor: colors.border, backgroundColor: colors.card }]}>
+          <TouchableOpacity accessibilityRole="button" disabled={!!working} onPress={() => openAccount('sign_in')} style={[styles.secondary, { borderColor: colors.border, backgroundColor: colors.card }]}>
             <AppText style={[styles.secondaryText, { color: colors.text }]} localized>Sign in</AppText>
           </TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => void continueWithGoogle()} style={[styles.google, { borderColor: colors.border, backgroundColor: colors.card, opacity: working ? 0.7 : 1 }]}>
-            {working ? <ActivityIndicator color={palette.blue} /> : <><Ionicons name="logo-google" size={18} color="#4285F4" /><AppText style={[styles.secondaryText, { color: colors.text }]} localized>Continue with Google</AppText></>}
+          <TouchableOpacity accessibilityRole="button" disabled={!!working} onPress={() => void continueWithGoogle()} style={[styles.google, { borderColor: colors.border, backgroundColor: colors.card, opacity: working ? 0.7 : 1 }]}>
+            {working === 'google' ? <ActivityIndicator color={palette.blue} /> : <><Ionicons name="logo-google" size={18} color="#4285F4" /><AppText style={[styles.secondaryText, { color: colors.text }]} localized>Continue with Google</AppText></>}
           </TouchableOpacity>
         </View> : <Surface style={styles.configNotice}>
           <Ionicons name="cloud-offline-outline" size={18} color={palette.amber} />
@@ -82,8 +82,8 @@ export default function WelcomeScreen() {
 
         <View style={styles.separator}><View style={[styles.separatorLine, { backgroundColor: colors.border }]} /><AppText style={[styles.orText, { color: colors.muted }]} localized>OR</AppText><View style={[styles.separatorLine, { backgroundColor: colors.border }]} /></View>
 
-        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => void continueAsGuest()} style={[styles.guest, { borderColor: colors.border, backgroundColor: colors.card, opacity: working ? 0.7 : 1 }]}>
-          {working ? <ActivityIndicator color={palette.blue} /> : <><Ionicons name="phone-portrait-outline" size={18} color={palette.blue} /><AppText style={[styles.guestText, { color: colors.text }]} localized>Continue as guest</AppText></>}
+        <TouchableOpacity accessibilityRole="button" disabled={!!working} onPress={() => void continueAsGuest()} style={[styles.guest, { borderColor: colors.border, backgroundColor: colors.card, opacity: working ? 0.7 : 1 }]}>
+          {working === 'guest' ? <ActivityIndicator color={palette.blue} /> : <><Ionicons name="phone-portrait-outline" size={18} color={palette.blue} /><AppText style={[styles.guestText, { color: colors.text }]} localized>Continue as guest</AppText></>}
         </TouchableOpacity>
 
         {error ? <AppText accessibilityRole="alert" style={styles.error} localized>{error}</AppText> : null}

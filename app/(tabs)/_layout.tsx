@@ -4,7 +4,7 @@ import { useLanguage } from '@/i18n/LanguageProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const icons: Record<string, keyof typeof Ionicons.glyphMap> = { index: 'home-outline', transactions: 'list-outline', reports: 'pie-chart-outline', budgets: 'wallet-outline', more: 'grid-outline' };
+const icons: Record<string, keyof typeof Ionicons.glyphMap> = { index: 'home-outline', transactions: 'list-outline', reports: 'pie-chart-outline', budgets: 'calendar-outline', more: 'grid-outline' };
 
 export default function TabLayout() {
   const { colors } = useTheme();
@@ -14,7 +14,7 @@ export default function TabLayout() {
     <Tabs.Screen name="index" options={{ title: translate('Home') }} />
     <Tabs.Screen name="transactions" options={{ title: translate('Transactions') }} />
     <Tabs.Screen name="reports" options={{ title: translate('Reports') }} />
-    <Tabs.Screen name="budgets" options={{ title: translate('Budgets') }} />
+    <Tabs.Screen name="budgets" options={{ title: translate('Plan') }} />
     <Tabs.Screen name="more" options={{ title: translate('More') }} />
   </Tabs>;
 }

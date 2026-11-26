@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { randomUUID } from 'expo-crypto';
+import { shouldAutoSync } from './sync-math';
 import { calculateSummary, calculateWalletBalance, convertMinorByRate, isValidDateOnly, RATE_SCALE, TransactionKind } from './money';
 import { migrateToV1 } from './migrations/001_initial';
 import { migrateToV2 } from './migrations/002_wallets_and_transfers';
@@ -174,7 +175,34 @@ export async function claimSyncOwner(userId: string) {
 
 export async function completeSync(lastSyncAt: string) {
   const db = await getDatabase();
-  await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('last_sync_at',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", lastSyncAt);
+  await db.withTransactionAsync(async () => {
+    await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('last_sync_at',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", lastSyncAt);
+    await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('auto_sync_enabled','true') ON CONFLICT(key) DO NOTHING");
+    await db.runAsync("DELETE FROM sync_state WHERE key='auto_sync_error'");
+  });
+}
+
+export async function setAutoSyncEnabled(userId: string, enabled: boolean) {
+  const db = await getDatabase();
+  await db.withTransactionAsync(async () => {
+    const owner = await db.getFirstAsync<{ value: string }>("SELECT value FROM sync_state WHERE key='owner_user_id'");
+    const lastSync = await db.getFirstAsync<{ value: string }>("SELECT value FROM sync_state WHERE key='last_sync_at'");
+    if (owner?.value !== userId || !lastSync) throw new Error('Sync this device with your account before changing automatic sync.');
+    await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('auto_sync_enabled',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", String(enabled));
+    if (enabled) await db.runAsync("DELETE FROM sync_state WHERE key='auto_sync_error'");
+  });
+}
+
+export async function isAutoSyncEnabled(userId: string) {
+  const db = await getDatabase();
+  const states = await db.getAllAsync<{ key: string; value: string }>("SELECT key,value FROM sync_state WHERE key IN ('owner_user_id','auto_sync_enabled','last_sync_at')");
+  const state = Object.fromEntries(states.map(item => [item.key, item.value]));
+  return shouldAutoSync(state.owner_user_id, userId, state.auto_sync_enabled, state.last_sync_at);
+}
+
+export async function recordAutoSyncFailure() {
+  const db = await getDatabase();
+  await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('auto_sync_error','true') ON CONFLICT(key) DO UPDATE SET value=excluded.value");
 }
 
 export async function getLocalSyncDeviceId(createId: () => string) {
@@ -188,11 +216,19 @@ export async function getLocalSyncDeviceId(createId: () => string) {
   return deviceId.value;
 }
 
-export async function loadSyncStatus() {
+export async function loadSyncStatus(userId?: string) {
   const db = await getDatabase();
   const queue = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM sync_queue');
-  const last = await db.getFirstAsync<{ value: string }>("SELECT value FROM sync_state WHERE key='last_sync_at'");
-  return { pendingCount: Number(queue?.count ?? 0), lastSyncAt: last?.value ?? null };
+  const states = await db.getAllAsync<{ key: string; value: string }>("SELECT key,value FROM sync_state WHERE key IN ('owner_user_id','last_sync_at','auto_sync_enabled','auto_sync_error')");
+  const state = Object.fromEntries(states.map(item => [item.key, item.value]));
+  const syncLinked = Boolean(state.owner_user_id) && (!userId || state.owner_user_id === userId);
+  return {
+    pendingCount: Number(queue?.count ?? 0),
+    lastSyncAt: state.last_sync_at ?? null,
+    syncLinked,
+    autoSyncEnabled: Boolean(state.owner_user_id && state.last_sync_at && (!userId || userId === state.owner_user_id) && state.auto_sync_enabled !== 'false'),
+    autoSyncError: state.auto_sync_error === 'true',
+  };
 }
 
 export async function isSyncLinkedTo(userId: string) {

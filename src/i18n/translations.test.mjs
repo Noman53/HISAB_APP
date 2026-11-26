@@ -12,6 +12,11 @@ test('English remains the default and Bengali uses exact translations', () => {
   assert.equal(translateText('Clear date'), 'তারিখ মুছুন');
   assert.equal(translateText('Welcome to Hisab'), 'হিসাবে স্বাগতম');
   assert.equal(translateText('Continue with Google'), 'Google দিয়ে চালিয়ে যান');
+  assert.equal(translateText('Plan'), 'পরিকল্পনা');
+  assert.equal(translateText('Your money, your control'), 'টাকার হিসাব থাকুক আপনার হাতে');
+  assert.equal(translateText('Automatic sync'), 'অটো সিঙ্ক');
+  assert.equal(translateText('Sync once to turn on automatic sync.'), 'একবার সিঙ্ক করলেই অটো সিঙ্ক চালু করতে পারবেন।');
+  assert.equal(translateText('Your phone’s screen lock helps protect your data. Backup files aren’t encrypted, so keep them somewhere private.'), 'ফোন লক রাখলে আপনার তথ্য সুরক্ষিত থাকবে। ব্যাকআপ ফাইলে আলাদা সুরক্ষা নেই, তাই ফাইলটা নিরাপদ জায়গায় রাখুন।');
 });
 
 test('dynamic translations preserve user-provided finance content', () => {

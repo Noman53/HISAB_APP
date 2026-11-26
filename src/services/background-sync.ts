@@ -1,7 +1,7 @@
 import * as BackgroundTask from 'expo-background-task';
 import * as Network from 'expo-network';
 import * as TaskManager from 'expo-task-manager';
-import { isSyncLinkedTo } from '@/finance/database';
+import { isAutoSyncEnabled, isSyncLinkedTo } from '@/finance/database';
 import { synchronizeFinance } from '@/finance/sync';
 import { getSupabaseClient } from '@/services/supabase';
 
@@ -17,7 +17,7 @@ TaskManager.defineTask(FINANCE_SYNC_TASK, async ({ error }) => {
     const { data, error: sessionError } = await client.auth.getSession();
     if (sessionError) return BackgroundTask.BackgroundTaskResult.Failed;
     const userId = data.session?.user.id;
-    if (!userId || !await isSyncLinkedTo(userId)) return BackgroundTask.BackgroundTaskResult.Success;
+    if (!userId || !await isSyncLinkedTo(userId) || !await isAutoSyncEnabled(userId)) return BackgroundTask.BackgroundTaskResult.Success;
     await synchronizeFinance(userId);
     return BackgroundTask.BackgroundTaskResult.Success;
   } catch {

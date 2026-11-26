@@ -1,5 +1,9 @@
 export type SyncWinner = 'local' | 'remote' | 'deleted';
 
+export function shouldAutoSync(ownerUserId: string | undefined, userId: string, setting: string | undefined, lastSyncAt: string | undefined) {
+  return ownerUserId === userId && Boolean(lastSyncAt) && setting !== 'false';
+}
+
 export function resolveSyncWinner(localModifiedAt: string, remoteUpdatedAt?: string | null, remoteDeletedAt?: string | null): SyncWinner {
   const local = Date.parse(localModifiedAt);
   if (!Number.isFinite(local)) throw new Error('Local sync timestamp is invalid.');

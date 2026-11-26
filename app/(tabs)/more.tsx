@@ -25,8 +25,7 @@ export default function More() {
       <AppText style={styles.heading} localized>More</AppText>
       <Surface style={styles.guestCard}>
         <View style={styles.guestIcon}><Ionicons name="phone-portrait-outline" size={20} color={palette.blue} /></View>
-        <View style={{ flex: 1 }}><AppText style={styles.cardTitle} localized>Local-first ledger</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>Your finance data stays available on this device, online or offline.</AppText></View>
-        <View style={styles.badge}><AppText style={styles.badgeText} localized>LOCAL</AppText></View>
+        <View style={{ flex: 1 }}><AppText style={styles.cardTitle} localized>Your finance data</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>Your records stay on this device and sync when you turn it on.</AppText></View>
       </Surface>
 
       <AppText style={styles.sectionTitle} localized>Appearance</AppText>
@@ -48,17 +47,12 @@ export default function More() {
       </Surface>
       {appLockError ? <AppText accessibilityRole="alert" style={styles.preferenceError} localized>{appLockError}</AppText> : null}
 
-      <AppText style={styles.sectionTitle} localized>Planning</AppText>
+      <AppText style={styles.sectionTitle} localized>Reminders</AppText>
       <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/notifications')}><Surface style={styles.item}><Ionicons name="notifications-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Notification preferences</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/planning/savings')}><Surface style={styles.item}><Ionicons name="flag-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Savings goals</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/planning/debts')}><Surface style={styles.item}><Ionicons name="people-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Debt manager</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/planning/recurring')}><Surface style={styles.item}><Ionicons name="repeat-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Recurring entries</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/planning/bills')}><Surface style={styles.item}><Ionicons name="receipt-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Bill reminders</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
 
       <AppText style={styles.sectionTitle} localized>Data & cloud</AppText>
       <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/account')}><Surface style={styles.item}><Ionicons name="cloud-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Cloud account & sync</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
       <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/backup')}><Surface style={styles.item}><Ionicons name="cloud-download-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Backup & restore</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <AppText style={[styles.footnote, { color: colors.muted }]} localized>App lock gates access but does not encrypt local data. Cloud accounts and sync require a configured Supabase project.</AppText>
     </ScrollView>
   </SafeAreaView>;
 }
@@ -72,8 +66,6 @@ const styles = StyleSheet.create({
   guestIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563EB15' },
   cardTitle: { fontSize: 13, fontWeight: '700', marginBottom: 3 },
   body: { fontSize: 11, lineHeight: 16 },
-  badge: { borderRadius: radius.pill, backgroundColor: '#2563EB14', paddingHorizontal: 8, paddingVertical: 5 },
-  badgeText: { color: palette.blue, fontSize: 9, fontWeight: '700' },
   sectionTitle: { fontSize: 15, fontWeight: '700', marginTop: 14, marginBottom: 2 },
   themeCard: { padding: 15 },
   modes: { flexDirection: 'row', gap: 8 },
@@ -84,5 +76,4 @@ const styles = StyleSheet.create({
   itemValue: { fontSize: 12 },
   lockCopy: { flex: 1 },
   lockHint: { fontSize: 10, marginTop: 3 },
-  footnote: { fontSize: 11, lineHeight: 17, marginTop: 12, textAlign: 'center' },
 });

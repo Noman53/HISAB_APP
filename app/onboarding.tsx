@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LocalizedTouchableOpacity as TouchableOpacity } from '@/components/LocalizedControls';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppText } from '@/components/AppText';
@@ -11,6 +11,7 @@ import { useFinanceStore } from '@/finance/store';
 import { useLanguage } from '@/i18n/LanguageProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing } from '@/theme/tokens';
+import { getSupabaseClient } from '@/services/supabase';
 
 const currencies = ['BDT', 'USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD', 'SGD', 'PKR', 'AED', 'SAR', 'CNY', 'CHF'];
 const slides = [
@@ -26,8 +27,26 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState('');
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const client = getSupabaseClient();
   const choosingCurrency = step === slides.length;
   const slide = slides[Math.min(step, slides.length - 1)];
+
+  useEffect(() => {
+    if (!client) { setAuthReady(true); return; }
+    let active = true;
+    void client.auth.getSession().then(({ data, error: sessionError }) => {
+      if (sessionError) throw sessionError;
+      if (active) setAuthenticated(Boolean(data.session));
+    }).catch(reason => {
+      if (active) setError(translate(reason instanceof Error ? reason.message : 'Could not load your account.'));
+    }).finally(() => { if (active) setAuthReady(true); });
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      if (active) setAuthenticated(Boolean(session));
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, [client, translate]);
 
   async function startUsingHisab() {
     setWorking(true);
@@ -78,8 +97,8 @@ export default function OnboardingScreen() {
       {error ? <AppText accessibilityRole="alert" style={styles.error} localized>{error}</AppText> : null}
       <View style={styles.actions}>
         {step > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Previous onboarding step" onPress={() => setStep(step - 1)} style={[styles.secondary, { borderColor: colors.border }]}><Ionicons name="arrow-back" size={18} color={colors.text} /></TouchableOpacity> : null}
-        <TouchableOpacity accessibilityRole="button" disabled={working} onPress={() => choosingCurrency ? void startUsingHisab() : setStep(step + 1)} style={[styles.primary, styles.actionPrimary, { opacity: working ? 0.7 : 1 }]}>
-          {working ? <ActivityIndicator color="#FFFFFF" /> : <><AppText style={styles.primaryText}>{translate(choosingCurrency ? 'Continue as guest' : step === slides.length - 1 ? 'Choose currency' : 'Next')}</AppText><Ionicons name={choosingCurrency ? 'checkmark' : 'arrow-forward'} size={18} color="#FFFFFF" /></>}
+        <TouchableOpacity accessibilityRole="button" disabled={working || (choosingCurrency && !authReady)} onPress={() => choosingCurrency ? void startUsingHisab() : setStep(step + 1)} style={[styles.primary, styles.actionPrimary, { opacity: working || (choosingCurrency && !authReady) ? 0.7 : 1 }]}>
+          {working ? <ActivityIndicator color="#FFFFFF" /> : <><AppText style={styles.primaryText}>{translate(choosingCurrency ? authenticated ? 'Continue' : 'Continue as guest' : step === slides.length - 1 ? 'Choose currency' : 'Next')}</AppText><Ionicons name={choosingCurrency ? 'checkmark' : 'arrow-forward'} size={18} color="#FFFFFF" /></>}
         </TouchableOpacity>
       </View>
       {!choosingCurrency ? <TouchableOpacity accessibilityRole="button" onPress={() => setStep(slides.length)} style={styles.skip}><AppText style={[styles.skipText, { color: colors.muted }]} localized>Skip introduction</AppText></TouchableOpacity> : <AppText style={[styles.privacy, { color: colors.muted }]} localized>Your records stay on this device unless you choose to sync them.</AppText>}

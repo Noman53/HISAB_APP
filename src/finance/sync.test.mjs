@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveSyncWinner } from './sync-math.ts';
+import { resolveSyncWinner, shouldAutoSync } from './sync-math.ts';
 
 test('offline sync conflict resolution', async t => {
   await t.test('prefers whichever edit has the later timestamp', () => {
     assert.equal(resolveSyncWinner('2026-11-20T10:00:00.000Z', '2026-11-20T09:59:00.000Z'), 'local');
     assert.equal(resolveSyncWinner('2026-11-20T10:00:00.000Z', '2026-11-20T10:01:00.000Z'), 'remote');
+  });
+
+  test('automatic sync stays linked to the account that owns this device', () => {
+    assert.equal(shouldAutoSync('user-1', 'user-1', undefined, '2026-11-20T10:00:00.000Z'), true);
+    assert.equal(shouldAutoSync('user-1', 'user-1', 'false', '2026-11-20T10:00:00.000Z'), false);
+    assert.equal(shouldAutoSync('user-1', 'user-2', 'true', '2026-11-20T10:00:00.000Z'), false);
+    assert.equal(shouldAutoSync('user-1', 'user-1', 'true', undefined), false);
+    assert.equal(shouldAutoSync(undefined, 'user-1', 'true', '2026-11-20T10:00:00.000Z'), false);
   });
   await t.test('keeps a newer delete as a tombstone and honors a later recreation', () => {
     assert.equal(resolveSyncWinner('2026-11-20T10:00:00.000Z', '2026-11-20T09:59:00.000Z', '2026-11-20T10:01:00.000Z'), 'deleted');

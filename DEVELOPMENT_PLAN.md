@@ -46,10 +46,10 @@
 - [x] Enable RLS and authenticated-only grants across every cloud finance table; add a pgTAP user-isolation test.
 - [x] Add persistent SQLite outbox triggers for inserts, updates, and deletes, including a v4 migration that queues existing guest records.
 - [x] Add email/password sign-in and account creation with chunked SecureStore session persistence.
-- [x] Add user-confirmed, manual two-way sync with stable-ID upserts, timestamp conflict resolution, tombstones, retryable queue errors, and an account-owner guard.
+- [x] Add user-confirmed first sync and automatic two-way sync with stable-ID upserts, timestamp conflict resolution, tombstones, retryable queue errors, and an account-owner guard.
 - [x] Add portable JSON backup and merge restore for all local financial records.
 - [ ] Configure a real Supabase project, apply the migration, run pgTAP RLS tests, and validate real sign-in/sync.
-- [x] Automatically synchronize an already-linked account when internet returns or the app becomes active.
+- [x] Automatically synchronize an already-linked account after local changes, sign-in, reconnection, and app foreground; let users turn automatic sync off.
 - [x] Register a best-effort OS background task after a successful manual sync.
 - [ ] Validate background task execution on physical Android/iOS; the OS controls actual scheduling and may defer work.
 - [x] Add password recovery flow and secure server-side cloud account deletion function.

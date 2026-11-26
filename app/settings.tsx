@@ -115,7 +115,7 @@ export default function SettingsScreen() {
         <Ionicons name="warning-outline" size={19} color={palette.amber} />
         <View style={styles.copy}>
           <AppText style={styles.sectionTitle} localized>Protect your data</AppText>
-          <AppText style={[styles.body, { color: colors.muted }]} localized>The app lock gates screen access but does not encrypt the local database. JSON backups are also unencrypted; store backup files somewhere private.</AppText>
+          <AppText style={[styles.body, { color: colors.muted }]} localized>Your phone’s screen lock helps protect your data. Backup files aren’t encrypted, so keep them somewhere private.</AppText>
         </View>
       </Surface>
       <Surface style={styles.about}>

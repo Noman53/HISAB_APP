@@ -19,7 +19,7 @@ Phase 4 adds weekly/monthly budgets, savings goals with contribution and withdra
 
 Phase 5 adds date-filtered reports with income, expenses, net cash flow, expense categories, and daily/monthly charts. Select one wallet or report on wallets in the primary wallet's currency. PDF and `.xlsx` exports include the selected date range and its transactions. Report currency groups remain separate.
 
-Phase 6 adds email/password Supabase authentication, secure session storage, a SQLite outbox for offline changes, manual two-way sync, conflict handling with last-write-wins timestamps and delete tombstones, JSON backup/restore, password recovery, and a server-side account deletion function. The first sync merges guest records after the user confirms; the app locks a local ledger to the first account that syncs, so its data cannot be accidentally uploaded to a different account. Already-linked accounts sync on reconnect and when the app returns to the foreground. A best-effort OS background task is registered after manual sync; execution timing is controlled by the operating system and still needs device validation. Cloud sync is unavailable until the Supabase migration is applied.
+Phase 6 adds email/password Supabase authentication, secure session storage, a SQLite outbox for offline changes, two-way sync, conflict handling with last-write-wins timestamps and delete tombstones, JSON backup/restore, password recovery, and a server-side account deletion function. The first sync merges guest records after the user confirms; the app locks a local ledger to the first account that syncs, so its data cannot be accidentally uploaded to a different account. After the first successful sync, automatic sync is on by default and can be turned off in the account screen. Changes sync while online, when connectivity returns, and when the app returns to the foreground. A best-effort OS background task is registered; execution timing is controlled by the operating system and still needs device validation. Cloud sync is unavailable until the Supabase migration is applied.
 
 Backups are unencrypted JSON files and contain sensitive financial data; store them somewhere private. Restoring merges matching IDs and keeps other local records. Email/password account creation and sign-in, password recovery, and the server-side account deletion function are implemented. RLS policies and a pgTAP isolation test are included, but need to be run against a local or hosted Supabase database before deployment.
 
@@ -42,7 +42,8 @@ The interface supports English and Bangla. Change the language under **More → 
 2. Apply the SQL migration in `supabase/migrations/` with the Supabase CLI or the SQL editor.
 3. Add `hisab://reset-password` to Supabase Auth's allowed redirect URLs for password recovery.
 4. Deploy `supabase/functions/delete-account` and configure the platform `SUPABASE_SERVICE_ROLE_KEY` secret for that function. Never add this key to the app's `.env`.
-5. Restart Expo, open **More → Cloud account & sync**, then create an account or sign in.
-6. Choose **Sync now** and confirm the guest-data merge. A backup is available under **More → Backup & restore**.
+5. To create email/password accounts without email verification, turn off **Confirm email** in the Supabase project's **Authentication → Providers → Email** settings. The local Supabase config also disables confirmations for local development.
+6. Restart Expo, open **More → Cloud account & sync**, then create an account or sign in.
+7. Choose **Sync now** and confirm the first data merge. Automatic sync starts after it completes. A backup is available under **More → Backup & restore**.
 
 The `supabase/tests/` RLS test uses pgTAP. Run it with `supabase test db` after setting up the Supabase CLI and local database. No Supabase credentials are checked into this repository.

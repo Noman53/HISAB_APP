@@ -13,3 +13,7 @@ test('guest and signed-in users resume at setup or the ledger', () => {
   assert.equal(getLaunchDestination(false, null, true), '/onboarding');
   assert.equal(getLaunchDestination(true, null, true), '/(tabs)');
 });
+
+test('a returning account does not repeat completed onboarding after sign-out', () => {
+  assert.equal(getLaunchDestination(true, 'account', false), '/(tabs)');
+});
