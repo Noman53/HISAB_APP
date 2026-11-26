@@ -3,6 +3,7 @@ node_modules/
 dist/
 web-build/
 /android
+/%USERPROFILE%/.npm-cache/
 .env
 .env.*
 !.env.example
