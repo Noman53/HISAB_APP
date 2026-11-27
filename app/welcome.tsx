@@ -9,10 +9,13 @@ import { Surface } from '@/components/Surface';
 import { setPersistentValue } from '@/services/persistent-storage';
 import { signInWithGoogle } from '@/services/google-auth';
 import { LAUNCH_CHOICE_KEY } from '@/services/launch-routing';
-import { isSupabaseConfigured } from '@/services/supabase';
+import { getSupabaseClient, isSupabaseConfigured } from '@/services/supabase';
 import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing } from '@/theme/tokens';
 import { isInitialSetupComplete } from '@/finance/database';
+import { synchronizeFinance } from '@/finance/sync';
+import { useFinanceStore } from '@/finance/store';
+import { registerBackgroundFinanceSync } from '@/services/background-sync';
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
@@ -45,7 +48,14 @@ export default function WelcomeScreen() {
       const result = await signInWithGoogle();
       if (result === 'signed_in') {
         await setPersistentValue(LAUNCH_CHOICE_KEY, 'account');
-        router.replace(await isInitialSetupComplete() ? '/(tabs)' : '/onboarding');
+        const setupComplete = await isInitialSetupComplete();
+        const client = getSupabaseClient();
+        const { data } = client ? await client.auth.getSession() : { data: { session: null } };
+        if (setupComplete && data.session) {
+          try { await synchronizeFinance(data.session.user.id); await registerBackgroundFinanceSync(); await useFinanceStore.getState().initialize(); }
+          catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not sync your data yet.'); }
+        }
+        router.replace(setupComplete ? '/(tabs)' : '/onboarding');
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Could not sign in with Google.');
@@ -77,7 +87,7 @@ export default function WelcomeScreen() {
           </TouchableOpacity>
         </View> : <Surface style={styles.configNotice}>
           <Ionicons name="cloud-offline-outline" size={18} color={palette.amber} />
-          <AppText style={[styles.noticeText, { color: colors.muted }]} localized>Online accounts are not configured. You can still use Hisab as a guest.</AppText>
+          <AppText style={[styles.noticeText, { color: colors.muted }]} localized>Online sign-in is unavailable right now. You can still use Hisab as a guest.</AppText>
         </Surface>}
 
         <View style={styles.separator}><View style={[styles.separatorLine, { backgroundColor: colors.border }]} /><AppText style={[styles.orText, { color: colors.muted }]} localized>OR</AppText><View style={[styles.separatorLine, { backgroundColor: colors.border }]} /></View>

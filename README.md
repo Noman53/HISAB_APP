@@ -1,49 +1,27 @@
-# Hisab — Personal Finance Manager
+# হিসাব (Hisab)
 
-Hisab is a cross-platform React Native app built with Expo, TypeScript, and Expo Router. Development is organized in phases; see [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md).
+হিসাব হলো নিজের আয়-ব্যয় আর টাকার পরিকল্পনা গুছিয়ে রাখার মোবাইল অ্যাপ। ইন্টারনেট না থাকলেও ফোনে হিসাব রাখা যায়।
 
-## Start
+## কী কী করা যায়
 
-1. Install Node.js 22.13+ (Node 26 is supported by the selected Expo SDK).
-2. Run `npm install`.
-3. Run `npx expo install --check` to confirm SDK package compatibility.
-4. Run `npm start` and open the project in Expo Go or a simulator.
+- আয়, খরচ আর এক ওয়ালেট থেকে আরেক ওয়ালেটে টাকা পাঠানোর হিসাব রাখা
+- একাধিক ওয়ালেট ও মুদ্রা ব্যবহার করা
+- বাজেট, সঞ্চয়ের লক্ষ্য, ধার-পাওনা, নিয়মিত লেনদেন আর বিলের তারিখ দেখা
+- সময় ধরে খরচের রিপোর্ট দেখা এবং PDF বা Excel-এ রাখা
+- ফোনে ব্যাকআপ রাখা, পরে সেই ব্যাকআপ থেকে হিসাব ফেরত আনা
 
-Supabase configuration is optional for local development. Copy `.env.example` to `.env`, set the project URL and publishable key, then restart Expo. Apply `supabase/migrations/20261120000100_finance_schema.sql` to the Supabase project before creating accounts or syncing. The app does not include service-role credentials.
+## কোথায় কী পাবেন
 
-## Current scope
+- **Home:** মোট ব্যালেন্স, এই মাসের আয়-খরচ ও সাম্প্রতিক হিসাব
+- **Transactions:** সব লেনদেন খোঁজা, ফিল্টার করা ও সম্পাদনা করা
+- **Reports:** নির্দিষ্ট সময়ের আয়-খরচের রিপোর্ট
+- **Plan:** বাজেট, সঞ্চয়, ধার-পাওনা, নিয়মিত লেনদেন আর বিলের রিমাইন্ডার
+- **Settings:** ভাষা, রং, অ্যাপ লক, প্রোফাইল, ওয়ালেট, ক্লাউড সিঙ্ক, ব্যাকআপ ও নোটিফিকেশন
 
-Phase 1 provides themed Expo Router tabs and reusable UI primitives. First launch includes a welcome screen and initial currency selection; existing ledgers bypass setup. Phase 2 adds an offline guest ledger using Expo SQLite, a default cash wallet and categories, income/expense creation and editing, searchable transaction history, deletion confirmation, and live dashboard calculations. Phase 3 adds multiple wallets, opening balances, account types, wallet details, internal transfers, and explicit-rate cross-currency transfers. Amounts are stored as integer minor units and no demo transactions are inserted.
+## অ্যাকাউন্ট ও সিঙ্ক
 
-Phase 4 adds weekly/monthly budgets, savings goals with contribution and withdrawal tracking, debt records with partial payments, recurring transaction templates, and bill reminders with payment history. Recurring entries post only after the user confirms a due occurrence. Linked debt payments change the wallet balance but stay separate from ordinary income and expense totals. Savings goals track progress without moving wallet funds. Marking a bill paid creates an expense only when a wallet is selected. Bill reminders, 80%/100% budget threshold alerts, recurring/debt due reminders, savings milestones, and weekly report reminders are opt-in local notifications. Planning reminders look ahead 90 days and schedule up to 12 nearest due items.
+গেস্ট হিসেবে শুরু করলে হিসাব এই ফোনেই থাকবে। ইমেইল বা Google দিয়ে সাইন ইন করলে হিসাব ক্লাউডে সেভ হবে। অটো সিঙ্ক চালু থাকলে নতুন পরিবর্তনও নিজে থেকেই সেভ হবে। অন্য ফোনে সাইন ইন করলে সেই হিসাব পাবেন। সাইন আউট করলেও এই ফোনের হিসাব মুছবে না।
 
-Phase 5 adds date-filtered reports with income, expenses, net cash flow, expense categories, and daily/monthly charts. Select one wallet or report on wallets in the primary wallet's currency. PDF and `.xlsx` exports include the selected date range and its transactions. Report currency groups remain separate.
+## ভাষা ও ব্যক্তিগত তথ্য
 
-Phase 6 adds email/password Supabase authentication, secure session storage, a SQLite outbox for offline changes, two-way sync, conflict handling with last-write-wins timestamps and delete tombstones, JSON backup/restore, password recovery, and a server-side account deletion function. The first sync merges guest records after the user confirms; the app locks a local ledger to the first account that syncs, so its data cannot be accidentally uploaded to a different account. After the first successful sync, automatic sync is on by default and can be turned off in the account screen. Changes sync while online, when connectivity returns, and when the app returns to the foreground. A best-effort OS background task is registered; execution timing is controlled by the operating system and still needs device validation. Cloud sync is unavailable until the Supabase migration is applied.
-
-Backups are unencrypted JSON files and contain sensitive financial data; store them somewhere private. Restoring merges matching IDs and keeps other local records. Email/password account creation and sign-in, password recovery, and the server-side account deletion function are implemented. RLS policies and a pgTAP isolation test are included, but need to be run against a local or hosted Supabase database before deployment.
-
-The transaction history loads 50 transactions and 50 transfers at a time. Dashboard totals are aggregated from all saved rows in SQLite. The portfolio balance uses manual base-currency valuation rates; rates are not refreshed automatically. Currency and opening balance are fixed after wallet creation, and wallets with financial history cannot be deleted.
-
-The optional app lock uses device biometrics with the operating system's device-credential fallback. It gates access to the app but does not encrypt the local SQLite database. First-run onboarding includes a skippable guided introduction and starting-currency selection.
-
-The interface supports English and Bangla. Change the language under **More → Profile & privacy → Language**; the choice is stored securely on the device. Static app copy, validation messages, alerts, control accessibility labels, and date displays follow the selected language. User-entered finance names and notes remain unchanged.
-
-## Finance checks
-
-- `npm run typecheck`
-- `npm run test:finance`
-- `npm run test:i18n`
-- `npx expo install --check`
-
-## Supabase setup
-
-1. Create a Supabase project and copy its URL and publishable key into `.env` as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (legacy anon key is also accepted).
-2. Apply the SQL migration in `supabase/migrations/` with the Supabase CLI or the SQL editor.
-3. Add `hisab://reset-password` to Supabase Auth's allowed redirect URLs for password recovery.
-4. Deploy `supabase/functions/delete-account` and configure the platform `SUPABASE_SERVICE_ROLE_KEY` secret for that function. Never add this key to the app's `.env`.
-5. To create email/password accounts without email verification, turn off **Confirm email** in the Supabase project's **Authentication → Providers → Email** settings. The local Supabase config also disables confirmations for local development.
-6. Restart Expo, open **More → Cloud account & sync**, then create an account or sign in.
-7. Choose **Sync now** and confirm the first data merge. Automatic sync starts after it completes. A backup is available under **More → Backup & restore**.
-
-The `supabase/tests/` RLS test uses pgTAP. Run it with `supabase test db` after setting up the Supabase CLI and local database. No Supabase credentials are checked into this repository.
+অ্যাপটি বাংলা ও ইংরেজিতে ব্যবহার করা যায়। **Settings** থেকে ভাষা, হালকা বা গাঢ় রং, আর অ্যাপ লক বেছে নিন। ব্যাকআপ ফাইলে আপনার আর্থিক হিসাব থাকে, তাই ফাইলটি ব্যক্তিগত জায়গায় রাখুন।

@@ -187,7 +187,7 @@ export async function setAutoSyncEnabled(userId: string, enabled: boolean) {
   await db.withTransactionAsync(async () => {
     const owner = await db.getFirstAsync<{ value: string }>("SELECT value FROM sync_state WHERE key='owner_user_id'");
     const lastSync = await db.getFirstAsync<{ value: string }>("SELECT value FROM sync_state WHERE key='last_sync_at'");
-    if (owner?.value !== userId || !lastSync) throw new Error('Sync this device with your account before changing automatic sync.');
+    if (owner?.value !== userId || (enabled && !lastSync)) throw new Error('Sync this device with your account before turning automatic sync on.');
     await db.runAsync("INSERT INTO sync_state(key,value) VALUES ('auto_sync_enabled',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", String(enabled));
     if (enabled) await db.runAsync("DELETE FROM sync_state WHERE key='auto_sync_error'");
   });
@@ -226,7 +226,7 @@ export async function loadSyncStatus(userId?: string) {
     pendingCount: Number(queue?.count ?? 0),
     lastSyncAt: state.last_sync_at ?? null,
     syncLinked,
-    autoSyncEnabled: Boolean(state.owner_user_id && state.last_sync_at && (!userId || userId === state.owner_user_id) && state.auto_sync_enabled !== 'false'),
+    autoSyncEnabled: Boolean(state.owner_user_id && (!userId || userId === state.owner_user_id) && state.auto_sync_enabled !== 'false'),
     autoSyncError: state.auto_sync_error === 'true',
   };
 }

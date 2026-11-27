@@ -12,6 +12,8 @@ import { useLanguage } from '@/i18n/LanguageProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing } from '@/theme/tokens';
 import { getSupabaseClient } from '@/services/supabase';
+import { synchronizeFinance } from '@/finance/sync';
+import { registerBackgroundFinanceSync } from '@/services/background-sync';
 
 const currencies = ['BDT', 'USD', 'EUR', 'GBP', 'INR', 'JPY', 'CAD', 'AUD', 'SGD', 'PKR', 'AED', 'SAR', 'CNY', 'CHF'];
 const slides = [
@@ -53,6 +55,11 @@ export default function OnboardingScreen() {
     setError('');
     try {
       await completeInitialSetup(currency);
+      const { data } = client ? await client.auth.getSession() : { data: { session: null } };
+      if (data.session) {
+        try { await synchronizeFinance(data.session.user.id); await registerBackgroundFinanceSync(); }
+        catch (reason) { console.warn('Initial cloud sync could not finish.', reason); }
+      }
       await useFinanceStore.getState().initialize();
       router.replace('/(tabs)');
     } catch (reason) {
@@ -72,7 +79,6 @@ export default function OnboardingScreen() {
         <AppText style={[styles.eyebrow, { color: colors.muted }]}>{translate(slide.eyebrow)}</AppText>
         <AppText style={styles.heading}>{translate(slide.title)}</AppText>
         <AppText style={[styles.description, { color: colors.muted }]}>{translate(slide.description)}</AppText>
-        <Surface style={styles.privacyCard}><Ionicons name="lock-closed-outline" size={18} color={palette.blue} /><AppText style={[styles.privacyCardText, { color: colors.muted }]} localized>No account is needed to get started.</AppText></Surface>
       </> : <>
         <View style={styles.brandIcon}><Ionicons name="wallet" size={29} color="#FFFFFF" /></View>
         <AppText style={[styles.eyebrow, { color: colors.muted }]} localized>PERSONAL FINANCE, MADE CLEAR</AppText>
@@ -115,8 +121,6 @@ const styles = StyleSheet.create({
   eyebrow: { fontSize: 10, fontWeight: '700', letterSpacing: 1.3 },
   heading: { fontSize: 30, fontWeight: '700', letterSpacing: -0.7, marginTop: 8 },
   description: { fontSize: 14, lineHeight: 21, marginTop: 10, marginBottom: 25 },
-  privacyCard: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 24 },
-  privacyCardText: { flex: 1, fontSize: 12, lineHeight: 18 },
   currencyCard: { padding: 17 },
   cardTitle: { fontSize: 15, fontWeight: '700' },
   helper: { fontSize: 11, marginTop: 5, marginBottom: 15 },

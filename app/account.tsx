@@ -19,6 +19,7 @@ import { signInWithGoogle } from '@/services/google-auth';
 import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing } from '@/theme/tokens';
 import { registerBackgroundFinanceSync, unregisterBackgroundFinanceSync } from '@/services/background-sync';
+import { useFinanceStore } from '@/finance/store';
 
 export default function AccountScreen() {
   const params = useLocalSearchParams<{ mode?: string; entry?: string }>();
@@ -59,12 +60,21 @@ export default function AccountScreen() {
       if (mode === 'sign_up') {
         const { data, error: authError } = await client.auth.signUp({ email: normalizedEmail, password });
         if (authError) throw authError;
-        if (data.session && params.entry === 'welcome') await continueFromWelcome();
-        else if (data.session) setMessage('Account created and signed in.');
-        else setMessage('Account created, but email confirmation is still enabled. Turn it off in your Supabase Auth settings to sign in right away.');
+        if (data.session) {
+          if (await isInitialSetupComplete()) {
+            try { await synchronizeFinance(data.session.user.id); await registerBackgroundFinanceSync(); await useFinanceStore.getState().initialize(); setStatus(await loadSyncStatus(data.session.user.id)); }
+            catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not sync your data yet.'); }
+          }
+          if (params.entry === 'welcome') await continueFromWelcome();
+          else setMessage('Account created and signed in.');
+        } else setMessage('Account created. Check your email to finish signing in.');
       } else {
-        const { error: authError } = await client.auth.signInWithPassword({ email: normalizedEmail, password });
+        const { data, error: authError } = await client.auth.signInWithPassword({ email: normalizedEmail, password });
         if (authError) throw authError;
+        if (await isInitialSetupComplete() && data.session) {
+          try { await synchronizeFinance(data.session.user.id); await registerBackgroundFinanceSync(); await useFinanceStore.getState().initialize(); setStatus(await loadSyncStatus(data.session.user.id)); }
+          catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not sync your data yet.'); }
+        }
         if (params.entry === 'welcome') await continueFromWelcome();
         else setMessage('Signed in successfully.');
       }
@@ -77,6 +87,11 @@ export default function AccountScreen() {
     try {
       const result = await signInWithGoogle();
       if (result === 'signed_in') {
+        const { data } = await client?.auth.getSession() ?? { data: { session: null } };
+        if (data.session && await isInitialSetupComplete()) {
+          try { await synchronizeFinance(data.session.user.id); await registerBackgroundFinanceSync(); await useFinanceStore.getState().initialize(); setStatus(await loadSyncStatus(data.session.user.id)); }
+          catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not sync your data yet.'); }
+        }
         if (params.entry === 'welcome') await continueFromWelcome();
         else setMessage('Signed in with Google.');
       }
@@ -92,6 +107,7 @@ export default function AccountScreen() {
     setWorking('sync'); setError(''); setMessage('');
     try {
       const lastSyncAt = await synchronizeFinance(session.user.id);
+      await useFinanceStore.getState().initialize();
       const nextStatus = await loadSyncStatus(session.user.id);
       setStatus(nextStatus);
       const scheduled = nextStatus.autoSyncEnabled ? await registerBackgroundFinanceSync() : false;
@@ -104,9 +120,7 @@ export default function AccountScreen() {
   }
 
   function confirmSync() {
-    if (!client || !session) return;
-    if (status.lastSyncAt) { void syncNow(); return; }
-    Alert.alert('Sync this finance data?', 'The first sync adds this device’s records to your account. Later syncs keep both up to date. Create a backup first if you want a separate copy.', [{ text: 'Cancel', style: 'cancel' }, { text: 'Sync now', onPress: () => void syncNow() }]);
+    void syncNow();
   }
 
   async function updateAutoSync(enabled: boolean) {
@@ -117,7 +131,10 @@ export default function AccountScreen() {
       if (enabled) {
         await registerBackgroundFinanceSync();
         const network = await Network.getNetworkStateAsync();
-        if (network.isConnected === true && network.isInternetReachable !== false) await synchronizeFinance(session.user.id);
+        if (network.isConnected === true && network.isInternetReachable !== false) {
+          await synchronizeFinance(session.user.id);
+          await useFinanceStore.getState().initialize();
+        }
         setMessage('Automatic sync is on.');
       } else {
         await unregisterBackgroundFinanceSync();
@@ -166,7 +183,7 @@ export default function AccountScreen() {
     <Surface style={styles.hero}><View style={[styles.heroIcon, { backgroundColor: colors.soft }]}><Ionicons name={session ? 'cloud-done-outline' : 'cloud-outline'} size={23} color={palette.blue} /></View><AppText style={styles.heroTitle} localized>{session ? 'Account connected' : 'Keep your data in sync'}</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>{session ? session.user.email : 'Sign in or create an account to sync your data across devices.'}</AppText></Surface>
     {!isSupabaseConfigured ? <Surface style={styles.config}><Ionicons name="cloud-offline-outline" size={19} color={palette.amber} /><AppText style={[styles.body, { color: colors.muted, flex: 1 }]} localized>Cloud sync is not available right now. You can keep using Hisab on this device.</AppText></Surface> : null}
     {session ? <>
-      <Surface style={styles.syncCard}><View style={styles.syncHeader}><View><AppText style={styles.cardTitle} localized>Cloud sync</AppText><AppText style={[styles.body, { color: colors.muted, marginTop: 4 }]} localized>{`${status.pendingCount} pending local change(s)`}</AppText></View><View style={[styles.statusDot, { backgroundColor: status.pendingCount || status.autoSyncError ? palette.amber : palette.green }]} /></View><AppText style={[styles.body, { color: colors.muted, marginTop: 9 }]} localized>{`Last synced: ${status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US') : 'Not yet'}`}</AppText><View style={[styles.autoSyncRow, { borderTopColor: colors.border }]}><View style={{ flex: 1 }}><AppText style={styles.autoSyncTitle} localized>Automatic sync</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>{status.syncLinked && status.lastSyncAt ? 'Keep this device up to date when you make changes.' : status.lastSyncAt && !status.syncLinked ? 'This device is linked to a different account.' : 'Sync once to turn on automatic sync.'}</AppText></View><Switch accessibilityLabel="Automatic sync" value={status.autoSyncEnabled} disabled={!!working || !status.syncLinked || !status.lastSyncAt} onValueChange={value => void updateAutoSync(value)} trackColor={{ true: palette.blue }} /></View>{status.autoSyncError ? <AppText accessibilityRole="alert" style={styles.syncWarning} localized>Automatic sync could not finish. Tap Sync now to try again.</AppText> : null}<TouchableOpacity disabled={!!working} accessibilityRole="button" onPress={confirmSync} style={[styles.primary, { opacity: working ? 0.65 : 1 }]}>{working === 'sync' ? <ActivityIndicator color="#FFFFFF" /> : <><Ionicons name="sync-outline" size={18} color="#FFFFFF" /><AppText style={styles.primaryText} localized>Sync now</AppText></>}</TouchableOpacity></Surface>
+      <Surface style={styles.syncCard}><View style={styles.syncHeader}><View><AppText style={styles.cardTitle} localized>Cloud sync</AppText><AppText style={[styles.body, { color: colors.muted, marginTop: 4 }]} localized>{`${status.pendingCount} pending local change(s)`}</AppText></View><View style={[styles.statusDot, { backgroundColor: status.pendingCount || status.autoSyncError ? palette.amber : palette.green }]} /></View><AppText style={[styles.body, { color: colors.muted, marginTop: 9 }]} localized>{`Last synced: ${status.lastSyncAt ? new Date(status.lastSyncAt).toLocaleString(language === 'bn' ? 'bn-BD' : 'en-US') : 'Not yet'}`}</AppText><View style={[styles.autoSyncRow, { borderTopColor: colors.border }]}><View style={{ flex: 1 }}><AppText style={styles.autoSyncTitle} localized>Automatic sync</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>{status.syncLinked && status.lastSyncAt ? 'Keep this device up to date when you make changes.' : status.lastSyncAt && !status.syncLinked ? 'This device is linked to a different account.' : status.syncLinked && status.autoSyncEnabled ? 'Cloud sync will start automatically.' : 'Sync once to turn on automatic sync.'}</AppText></View><Switch accessibilityLabel="Automatic sync" value={status.autoSyncEnabled} disabled={!!working || !status.syncLinked || (!status.lastSyncAt && !status.autoSyncEnabled)} onValueChange={value => void updateAutoSync(value)} trackColor={{ true: palette.blue }} /></View>{status.autoSyncError ? <AppText accessibilityRole="alert" style={styles.syncWarning} localized>Automatic sync could not finish. Tap Sync now to try again.</AppText> : null}<TouchableOpacity disabled={!!working} accessibilityRole="button" onPress={confirmSync} style={[styles.primary, { opacity: working ? 0.65 : 1 }]}>{working === 'sync' ? <ActivityIndicator color="#FFFFFF" /> : <><Ionicons name="sync-outline" size={18} color="#FFFFFF" /><AppText style={styles.primaryText} localized>Sync now</AppText></>}</TouchableOpacity></Surface>
       <TouchableOpacity disabled={!!working} onPress={() => void signOut()} style={[styles.signOut, { borderColor: colors.border }]}>{working === 'signout' ? <ActivityIndicator color={palette.red} /> : <><Ionicons name="log-out-outline" size={17} color={palette.red} /><AppText style={styles.signOutText} localized>Sign out</AppText></>}</TouchableOpacity>
       <TouchableOpacity accessibilityRole="button" disabled={!!working} onPress={confirmDeleteAccount} style={[styles.signOut, { borderColor: palette.red }]}>{working === 'delete' ? <ActivityIndicator color={palette.red} /> : <><Ionicons name="trash-outline" size={17} color={palette.red} /><AppText style={styles.signOutText} localized>Delete cloud account</AppText></>}</TouchableOpacity>
     </> : isSupabaseConfigured ? <>

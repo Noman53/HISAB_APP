@@ -114,9 +114,25 @@ async function pullTombstones(client: NonNullable<ReturnType<typeof getSupabaseC
   }
 }
 
-export async function synchronizeFinance(userId: string) {
+let activeSync: { userId: string; promise: Promise<string> } | null = null;
+
+export function synchronizeFinance(userId: string): Promise<string> {
+  if (activeSync) {
+    return activeSync.userId === userId
+      ? activeSync.promise
+      : Promise.reject(new Error('A different account is already syncing on this device.'));
+  }
+  const promise = runFinanceSync(userId);
+  activeSync = { userId, promise };
+  void promise.finally(() => {
+    if (activeSync?.promise === promise) activeSync = null;
+  }).catch(() => undefined);
+  return promise;
+}
+
+async function runFinanceSync(userId: string) {
   const client = getSupabaseClient();
-  if (!client) throw new Error('Add your Supabase URL and publishable key to .env before syncing.');
+  if (!client) throw new Error('Cloud sync is unavailable right now. Try again later.');
   await claimSyncOwner(userId);
   for (let round = 0; round < 100; round++) {
     const queue = await loadSyncQueue(500);

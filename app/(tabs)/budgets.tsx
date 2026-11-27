@@ -8,7 +8,7 @@ import { Surface } from '@/components/Surface';
 import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing } from '@/theme/tokens';
 
-type PlanningRoute = '/planning/budget' | '/planning/savings' | '/planning/debts' | '/planning/recurring' | '/planning/bills' | '/notifications';
+type PlanningRoute = '/planning/budget' | '/planning/savings' | '/planning/debts' | '/planning/recurring' | '/planning/bills';
 
 const tools: { title: string; detail: string; icon: keyof typeof Ionicons.glyphMap; route: PlanningRoute }[] = [
   { title: 'Budgets', detail: 'Set weekly or monthly spending limits.', icon: 'pie-chart-outline', route: '/planning/budget' },
@@ -16,7 +16,6 @@ const tools: { title: string; detail: string; icon: keyof typeof Ionicons.glyphM
   { title: 'Debt manager', detail: 'Keep track of money you owe or are owed.', icon: 'people-outline', route: '/planning/debts' },
   { title: 'Recurring entries', detail: 'Review regular income and expenses before adding them.', icon: 'repeat-outline', route: '/planning/recurring' },
   { title: 'Bill reminders', detail: 'Keep upcoming payments and due dates in one place.', icon: 'receipt-outline', route: '/planning/bills' },
-  { title: 'Reminders & alerts', detail: 'Choose which notifications you want to get.', icon: 'notifications-outline', route: '/notifications' },
 ];
 
 export default function PlanningScreen() {

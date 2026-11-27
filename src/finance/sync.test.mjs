@@ -12,7 +12,7 @@ test('offline sync conflict resolution', async t => {
     assert.equal(shouldAutoSync('user-1', 'user-1', undefined, '2026-11-20T10:00:00.000Z'), true);
     assert.equal(shouldAutoSync('user-1', 'user-1', 'false', '2026-11-20T10:00:00.000Z'), false);
     assert.equal(shouldAutoSync('user-1', 'user-2', 'true', '2026-11-20T10:00:00.000Z'), false);
-    assert.equal(shouldAutoSync('user-1', 'user-1', 'true', undefined), false);
+    assert.equal(shouldAutoSync('user-1', 'user-1', 'true', undefined), true);
     assert.equal(shouldAutoSync(undefined, 'user-1', 'true', '2026-11-20T10:00:00.000Z'), false);
   });
   await t.test('keeps a newer delete as a tombstone and honors a later recreation', () => {

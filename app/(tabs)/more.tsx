@@ -12,68 +12,84 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { palette, radius, spacing, ThemeMode } from '@/theme/tokens';
 
 const modes: ThemeMode[] = ['system', 'light', 'dark'];
+type SettingsRoute = '/settings' | '/wallets' | '/currency-rates' | '/notifications' | '/account' | '/backup';
 
-export default function More() {
+function SettingsRow({ icon, title, route, value }: { icon: keyof typeof Ionicons.glyphMap; title: string; route: SettingsRoute; value?: string | number }) {
+  const { colors } = useTheme();
+  return <TouchableOpacity accessibilityRole="button" onPress={() => router.push(route)}>
+    <Surface style={styles.row}>
+      <View style={[styles.rowIcon, { backgroundColor: colors.soft }]}><Ionicons name={icon} size={19} color={palette.blue} /></View>
+      <AppText style={styles.rowTitle} localized>{title}</AppText>
+      {value !== undefined ? <AppText style={[styles.value, { color: colors.muted }]}>{value}</AppText> : null}
+      <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+    </Surface>
+  </TouchableOpacity>;
+}
+
+export default function SettingsHome() {
   const { colors, mode, setMode, preferenceError } = useTheme();
   const data = useFinanceStore(state => state.data);
-  const { enabled: appLockEnabled, supported: appLockSupported, updating: appLockUpdating, error: appLockError, setEnabled: setAppLockEnabled } = useAppLock();
-  const { translate } = useLanguage();
+  const { enabled, supported, updating, error, setEnabled } = useAppLock();
+  const { language, setLanguage, translate, error: languageError } = useLanguage();
 
   return <SafeAreaView style={[styles.safe, { backgroundColor: colors.background }]} edges={['top']}>
     <ScrollView contentContainerStyle={styles.content}>
       <AppText style={[styles.eyebrow, { color: colors.muted }]} localized>HISAB</AppText>
-      <AppText style={styles.heading} localized>More</AppText>
-      <Surface style={styles.guestCard}>
-        <View style={styles.guestIcon}><Ionicons name="phone-portrait-outline" size={20} color={palette.blue} /></View>
-        <View style={{ flex: 1 }}><AppText style={styles.cardTitle} localized>Your finance data</AppText><AppText style={[styles.body, { color: colors.muted }]} localized>Your records stay on this device and sync when you turn it on.</AppText></View>
+      <AppText style={styles.heading} localized>Settings</AppText>
+
+      <AppText style={styles.sectionTitle} localized>App settings</AppText>
+      <Surface style={styles.preferences}>
+        <View style={styles.preferenceBlock}>
+          <AppText style={styles.preferenceTitle} localized>Language</AppText>
+          <View style={styles.choiceRow}>{(['en', 'bn'] as const).map(value => <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: language === value }} onPress={() => void setLanguage(value)} style={[styles.choice, { backgroundColor: language === value ? palette.blue : colors.background, borderColor: language === value ? palette.blue : colors.border }]}><AppText style={[styles.choiceText, { color: language === value ? '#FFFFFF' : colors.text }]}>{translate(value === 'en' ? 'English' : 'Bangla')}</AppText></TouchableOpacity>)}</View>
+          {languageError ? <AppText accessibilityRole="alert" style={styles.error} localized>{languageError}</AppText> : null}
+        </View>
+        <View style={[styles.preferenceBlock, { borderTopColor: colors.border }]}>
+          <AppText style={styles.preferenceTitle} localized>Appearance</AppText>
+          <View style={styles.choiceRow}>{modes.map(value => <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: mode === value }} onPress={() => void setMode(value)} style={[styles.choice, { backgroundColor: mode === value ? palette.blue : colors.background, borderColor: mode === value ? palette.blue : colors.border }]}><AppText style={[styles.choiceText, { color: mode === value ? '#FFFFFF' : colors.text }]} localized>{value === 'system' ? 'System' : value === 'light' ? 'Light' : 'Dark'}</AppText></TouchableOpacity>)}</View>
+          {preferenceError ? <AppText accessibilityRole="alert" style={styles.error} localized>{preferenceError}</AppText> : null}
+        </View>
+        <View style={[styles.lockRow, { borderTopColor: colors.border }]}>
+          <View style={[styles.rowIcon, { backgroundColor: colors.soft }]}><Ionicons name="lock-closed-outline" size={19} color={palette.blue} /></View>
+          <View style={styles.lockCopy}><AppText style={styles.rowTitle} localized>App lock</AppText><AppText style={[styles.helper, { color: colors.muted }]} localized>{supported ? 'Use your fingerprint or phone lock.' : 'App lock is available only in the mobile app.'}</AppText></View>
+          {supported ? <Switch accessibilityLabel={translate('App lock')} value={enabled} disabled={updating} onValueChange={value => void setEnabled(value)} trackColor={{ true: palette.blue }} /> : null}
+        </View>
+        {error ? <AppText accessibilityRole="alert" style={styles.error} localized>{error}</AppText> : null}
       </Surface>
 
-      <AppText style={styles.sectionTitle} localized>Appearance</AppText>
-      <Surface style={styles.themeCard}>
-        <AppText style={[styles.body, { color: colors.muted, marginBottom: 12 }]} localized>Choose the appearance used by Hisab.</AppText>
-        <View style={styles.modes}>{modes.map(value => <TouchableOpacity key={value} accessibilityRole="button" accessibilityState={{ selected: mode === value }} onPress={() => { void setMode(value); }} style={[styles.mode, { backgroundColor: mode === value ? palette.blue : colors.background, borderColor: mode === value ? palette.blue : colors.border }]}><AppText style={{ color: mode === value ? '#FFFFFF' : colors.text, fontWeight: '600', fontSize: 12, textTransform: 'capitalize' }}>{translate(value === 'system' ? 'System' : value === 'light' ? 'Light' : 'Dark')}</AppText></TouchableOpacity>)}</View>
-        {preferenceError ? <AppText accessibilityRole="alert" style={styles.preferenceError} localized>{preferenceError}</AppText> : null}
-      </Surface>
+      <AppText style={styles.sectionTitle} localized>Profile & wallets</AppText>
+      <SettingsRow icon="person-circle-outline" title="Profile" route="/settings" />
+      <SettingsRow icon="wallet-outline" title="Manage wallets" route="/wallets" value={data?.wallets.length ?? 0} />
+      <SettingsRow icon="swap-horizontal-outline" title="Portfolio currency & rates" route="/currency-rates" value={data?.baseCurrency ?? '—'} />
 
-      <AppText style={styles.sectionTitle} localized>Local account</AppText>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/settings')}><Surface style={styles.item}><Ionicons name="person-circle-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Profile & privacy</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/wallets')}><Surface style={styles.item}><Ionicons name="wallet-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Manage wallets</AppText><AppText style={[styles.itemValue, { color: colors.muted }]}>{data?.wallets.length ?? '—'}</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <Surface style={styles.item}><Ionicons name="cash-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Primary wallet currency</AppText><AppText style={[styles.itemValue, { color: colors.muted }]}>{data?.currency ?? '—'}</AppText></Surface>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/currency-rates')}><Surface style={styles.item}><Ionicons name="swap-horizontal-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Portfolio currency & rates</AppText><AppText style={[styles.itemValue, { color: colors.muted }]}>{data?.baseCurrency ?? '—'}</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <Surface style={styles.item}>
-        <Ionicons name="lock-closed-outline" size={19} color={palette.blue} />
-        <View style={styles.lockCopy}><AppText style={styles.itemLabel} localized>App lock</AppText><AppText style={[styles.lockHint, { color: colors.muted }]} localized>{appLockSupported ? 'Biometrics with device passcode fallback' : 'App lock is available only in the mobile app.'}</AppText></View>
-        {appLockSupported ? <Switch accessibilityLabel={translate('App lock')} value={appLockEnabled} disabled={appLockUpdating} onValueChange={value => void setAppLockEnabled(value)} trackColor={{ true: palette.blue }} /> : null}
-      </Surface>
-      {appLockError ? <AppText accessibilityRole="alert" style={styles.preferenceError} localized>{appLockError}</AppText> : null}
+      <AppText style={styles.sectionTitle} localized>Data & backup</AppText>
+      <SettingsRow icon="cloud-outline" title="Cloud account & sync" route="/account" />
+      <SettingsRow icon="cloud-download-outline" title="Backup & restore" route="/backup" />
 
       <AppText style={styles.sectionTitle} localized>Reminders</AppText>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/notifications')}><Surface style={styles.item}><Ionicons name="notifications-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Notification preferences</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-
-      <AppText style={styles.sectionTitle} localized>Data & cloud</AppText>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/account')}><Surface style={styles.item}><Ionicons name="cloud-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Cloud account & sync</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
-      <TouchableOpacity accessibilityRole="button" onPress={() => router.push('/backup')}><Surface style={styles.item}><Ionicons name="cloud-download-outline" size={19} color={palette.blue} /><AppText style={styles.itemLabel} localized>Backup & restore</AppText><Ionicons name="chevron-forward" size={16} color={colors.muted} /></Surface></TouchableOpacity>
+      <SettingsRow icon="notifications-outline" title="Notification preferences" route="/notifications" />
     </ScrollView>
   </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: spacing.md, paddingTop: 24, gap: 10 },
+  content: { padding: spacing.md, paddingTop: 24, paddingBottom: 34, gap: 9 },
   eyebrow: { fontSize: 10, letterSpacing: 1.3, fontWeight: '700' },
-  heading: { fontSize: 26, fontWeight: '700', marginBottom: 8 },
-  guestCard: { padding: 14, flexDirection: 'row', alignItems: 'center', gap: 11 },
-  guestIcon: { width: 40, height: 40, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#2563EB15' },
-  cardTitle: { fontSize: 13, fontWeight: '700', marginBottom: 3 },
-  body: { fontSize: 11, lineHeight: 16 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', marginTop: 14, marginBottom: 2 },
-  themeCard: { padding: 15 },
-  modes: { flexDirection: 'row', gap: 8 },
-  mode: { flex: 1, alignItems: 'center', paddingVertical: 10, borderWidth: 1, borderRadius: radius.sm },
-  preferenceError: { color: palette.red, fontSize: 11, lineHeight: 16, marginTop: 10 },
-  item: { padding: 15, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  itemLabel: { flex: 1, fontSize: 12, fontWeight: '600' },
-  itemValue: { fontSize: 12 },
+  heading: { fontSize: 27, fontWeight: '700', marginBottom: 3 },
+  sectionTitle: { fontSize: 15, fontWeight: '700', marginTop: 13, marginBottom: 1 },
+  preferences: { paddingHorizontal: 14 },
+  preferenceBlock: { paddingVertical: 13 },
+  preferenceTitle: { fontSize: 12, fontWeight: '600', marginBottom: 9 },
+  choiceRow: { flexDirection: 'row', gap: 8 },
+  choice: { flex: 1, minHeight: 39, borderRadius: radius.sm, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  choiceText: { fontSize: 11, fontWeight: '600' },
+  lockRow: { minHeight: 66, borderTopWidth: StyleSheet.hairlineWidth, flexDirection: 'row', alignItems: 'center', gap: 10 },
   lockCopy: { flex: 1 },
-  lockHint: { fontSize: 10, marginTop: 3 },
+  helper: { fontSize: 10, lineHeight: 15, marginTop: 3 },
+  error: { color: palette.red, fontSize: 11, lineHeight: 16, paddingBottom: 8 },
+  row: { minHeight: 58, paddingHorizontal: 12, paddingVertical: 9, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  rowIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  rowTitle: { flex: 1, fontSize: 12, fontWeight: '600' },
+  value: { fontSize: 11 },
 });
